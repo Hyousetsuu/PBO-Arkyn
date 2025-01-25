@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "914451946370",
+    "project_id": "arkyn-29edb",
+    "storage_bucket": "arkyn-29edb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:914451946370:android:c02fe4058e72b6ba4dcd9b",
+        "android_client_info": {
+          "package_name": "com.arkyn.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDSLhr-ztYTdGouAgS0K4f9K9pr2c_V7Pw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
