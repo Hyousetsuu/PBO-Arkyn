@@ -1,16 +1,23 @@
-# arkyn
+# Arkyn
 
-A new Flutter project.
+**Arkyn** is a cross-platform application built using **Flutter**, allowing the app to run on **Android, iOS, Web, and Desktop platforms** (Windows, macOS, Linux).
 
-## Getting Started
+This project is currently in its **initial development stage**, based on the default Flutter project template, and can be further developed according to project or academic needs.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Features (Planned / Placeholder)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+> The following features are examples and can be expanded as the project grows:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- 📱 Cross-platform UI (Android, iOS, Web, Desktop)
+- 🎨 Responsive and modern user interface
+- 🔐 User authentication system
+- 🌐 API integration
+- 💾 Local data storage (SQLite / Hive)
+- 🚀 Scalable Flutter architecture
+
+---
+
+## 📁 Project Structure
+
