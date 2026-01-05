@@ -64,17 +64,14 @@ cd PBO-Arkyn
 Install dependencies:
 
 bash
-Salin kode
 flutter pub get
 Run the application:
 
 bash
-Salin kode
 flutter run
 Run on a specific platform:
 
 bash
-Salin kode
 flutter run -d android
 flutter run -d ios
 flutter run -d chrome
@@ -83,7 +80,6 @@ Testing
 Run unit tests using:
 
 bash
-Salin kode
 flutter test
 Dependencies
 All dependencies used in this project are defined and managed in the pubspec.yaml file.
