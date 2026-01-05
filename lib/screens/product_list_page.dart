@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/game/content_model.dart';
+import '../models/content_model.dart';
 
 class ProductListPage extends StatelessWidget {
   final List<ContentModel> productList;

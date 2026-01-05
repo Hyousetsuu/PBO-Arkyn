@@ -1,5 +1,5 @@
 // lib/services/content_service.dart
-import '../models/game/content_model.dart';
+import '../models/content_model.dart';
 
 class ContentService {
   // Simulasi database menggunakan List

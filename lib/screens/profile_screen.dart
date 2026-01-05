@@ -2,7 +2,7 @@ import 'package:arkyn/screens/product_list_page.dart';
 import 'package:flutter/material.dart';
 import 'upload_game.dart'; // Impor file upload_game.dart
 import 'edit_profile.dart';
-import '../models/game/content_model.dart';
+import '../models/content_model.dart';
 
 void main() => runApp(const ProfileApp());
 
