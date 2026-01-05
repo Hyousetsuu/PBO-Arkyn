@@ -29,11 +29,18 @@ class ProductListPage extends StatelessWidget {
                     horizontal: 16.0,
                   ),
                   child: ListTile(
+                    // Menampilkan Gambar Kecil di kiri (Opsional, biar lebih bagus)
+                    leading: Image.network(
+                      product.coverUrl, 
+                      width: 50, 
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, stack) => const Icon(Icons.image_not_supported),
+                    ),
                     title: Text(product.name),
                     subtitle: Text(
                       'Kategori: ${product.category}\n'
                       'Harga: Rp${product.price}\n'
-                      'Tentang: ${product.about}',
+                      'Tentang: ${product.description}', // UBAH 'about' jadi 'description'
                     ),
                   ),
                 );

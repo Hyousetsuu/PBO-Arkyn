@@ -1,19 +1,60 @@
 import 'package:flutter/material.dart';
-import 'game.dart';
-import '../widgets/buy_button.dart'; // Import BuyButton
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/content_model.dart'; // Pastikan path ke model benar
+import '../widgets/buy_button.dart';
 
-class DetailScreen extends StatelessWidget {
-  final Game game;
+class DetailScreen extends StatefulWidget {
+  final ContentModel game; // Kita terima data dari Home
 
-  // Constructor to receive the game object
-  const DetailScreen(
-      {super.key, required this.game,
-      required String title,
-      required String image,
-      required String description,
-      required String developer,
-      required String price,
-      required List<String> categories});
+  const DetailScreen({super.key, required this.game});
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+  bool _isLoading = false;
+
+  // Fungsi Transaksi Pembelian
+  Future<void> _buyGame() async {
+    setState(() => _isLoading = true);
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      try {
+        DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+        
+        // Cek apakah game sudah ada di library (opsional, tapi bagus)
+        DocumentSnapshot doc = await userDoc.get();
+        List dynamicLibrary = (doc.data() as Map)['library'] ?? [];
+        
+        if (dynamicLibrary.contains(widget.game.id)) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Anda sudah memiliki game ini!'), backgroundColor: Colors.orange),
+          );
+        } else {
+          // Tambahkan ID game ke library user
+          await userDoc.update({
+            'library': FieldValue.arrayUnion([widget.game.id]),
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Berhasil membeli ${widget.game.name}!'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membeli: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Silahkan login terlebih dahulu'), backgroundColor: Colors.red),
+        );
+    }
+    setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,19 +62,12 @@ class DetailScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF1B2838),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color:
-                  Colors.white), // Change the color of the back arrow to white
-          onPressed: () {
-            Navigator.pop(context); // Go back to the previous screen
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          game.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15, // Smaller font size for the title
-          ),
+          widget.game.name,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
         ),
         backgroundColor: const Color(0xFF1A1A2E),
         elevation: 0,
@@ -43,7 +77,7 @@ class DetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display game image
+            // GAMBAR (Menggunakan Network Image)
             Container(
               width: double.infinity,
               height: 250,
@@ -59,33 +93,34 @@ class DetailScreen extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  game.imageUrl,
+                child: Image.network( // Ganti Asset jadi Network
+                  widget.game.coverUrl,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey, 
+                    child: const Center(child: Icon(Icons.broken_image, color: Colors.white)),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Display game developer info
+            // DEVELOPER INFO
             Container(
               width: double.infinity,
               color: const Color(0xFF2A475E),
               padding: const EdgeInsets.all(16),
               child: Text(
-                "Developer: ${game.developer}",
+                "Developer: ${widget.game.developer}",
                 style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Display game description
+            // DESCRIPTION
             const Text(
               "About this game",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Container(
@@ -94,39 +129,33 @@ class DetailScreen extends StatelessWidget {
                   color: const Color(0xFF171A21),
                   borderRadius: BorderRadius.circular(8)),
               child: Text(
-                game.description,
+                widget.game.description,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Display categories section with vertical spacing
+            // CATEGORY (Diambil dari Model)
             const Text(
               "Categories",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Wrap(
-              spacing: 8.0, // Horizontal spacing between chips
-              runSpacing: 8.0, // Vertical spacing between rows of chips
-              children: game.categories
-                  .map((category) => Chip(
-                        label: Text(
-                          category,
-                          style: const TextStyle(
-                              color: Colors
-                                  .white), // Change category text color to white
-                        ),
-                        backgroundColor: const Color(0xFF2A475E),
-                      ))
-                  .toList(),
+              spacing: 8.0,
+              children: [
+                Chip( // Karena ContentModel kita kategori-nya cuma 1 string, kita tampilkan satu saja
+                  label: Text(
+                    widget.game.category,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: const Color(0xFF2A475E),
+                )
+              ],
             ),
             const SizedBox(height: 16),
 
-            // Display price and buy button
+            // PRICE & BUY BUTTON
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -136,7 +165,7 @@ class DetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    game.title,
+                    widget.game.name,
                     style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
@@ -149,12 +178,15 @@ class DetailScreen extends StatelessWidget {
                             color: const Color(0xFF212A3E),
                             borderRadius: BorderRadius.circular(4)),
                         child: Text(
-                          "Rp ${game.price}",
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 16),
+                          "Rp ${widget.game.price.toStringAsFixed(0)}",
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
                         ),
                       ),
-                      BuyButton(), // Use BuyButton widget
+                      // Tombol Beli yang Fungsional
+                      BuyButton(
+                        isLoading: _isLoading,
+                        onPressed: _buyGame,
+                      ),
                     ],
                   ),
                 ],

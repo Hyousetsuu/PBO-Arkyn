@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
 
 class UploadGameScreen extends StatefulWidget {
   const UploadGameScreen({super.key});
@@ -17,28 +14,14 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
 
-  Uint8List? _gamePictureBytes;
   bool _isUploading = false;
 
-  // Function to pick an image from the gallery
-  Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      setState(() {
-        _gamePictureBytes = bytes;
-      });
-    }
-  }
-
-  // Function to upload game data to Firebase
+  // Function to upload game data to Firebase Firestore
   Future<void> _uploadData() async {
     if (_nameController.text.isEmpty ||
         _categoryController.text.isEmpty ||
         _priceController.text.isEmpty ||
-        _aboutController.text.isEmpty ||
-        _gamePictureBytes == null) {
+        _aboutController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all fields')),
       );
@@ -50,26 +33,22 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
     });
 
     try {
-      // Upload image to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('game_pictures/${DateTime.now().millisecondsSinceEpoch}.jpg');
-      final uploadTask = await storageRef.putData(_gamePictureBytes!);
-      final imageUrl = await uploadTask.ref.getDownloadURL();
-
-      // Upload data to Firestore
-      final gamesCollection = FirebaseFirestore.instance.collection('games');
-      await gamesCollection.add({
+      // Simpan data ke koleksi 'pending' di Firestore
+      final gameData = {
         'name': _nameController.text,
         'category': _categoryController.text,
-        'price': double.parse(_priceController.text),
+        'price': double.tryParse(_priceController.text) ??
+            0.0, // Konversi harga ke double
         'about': _aboutController.text,
-        'image_url': imageUrl,
-        'uploaded_at': FieldValue.serverTimestamp(),
-      });
+        'uploadedAt':
+            FieldValue.serverTimestamp(), // Tambahkan waktu unggah otomatis
+      };
+
+      // Menggunakan koleksi 'pending' daripada 'games'
+      await FirebaseFirestore.instance.collection('pending').add(gameData);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Game uploaded successfully')),
+        const SnackBar(content: Text('Game uploaded to pending successfully')),
       );
 
       // Reset form
@@ -77,9 +56,6 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
       _categoryController.clear();
       _priceController.clear();
       _aboutController.clear();
-      setState(() {
-        _gamePictureBytes = null;
-      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -147,29 +123,6 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
                 ],
               );
             }),
-            const Text(
-              'Game Picture',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: double.infinity,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF374151),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _gamePictureBytes == null
-                    ? const Icon(Icons.add, color: Colors.white)
-                    : Image.memory(
-                        _gamePictureBytes!,
-                        fit: BoxFit.cover,
-                      ),
-              ),
-            ),
             const Spacer(),
             if (_isUploading)
               const Center(

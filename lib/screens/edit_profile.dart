@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -11,11 +13,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
 
+  // Mendapatkan referensi pengguna yang sedang login
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   void dispose() {
     _nameController.dispose();
     _aboutController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  // Fungsi untuk memuat data pengguna dari Firestore
+  Future<void> _loadUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        setState(() {
+          _nameController.text = userDoc['name'] ?? '';
+          _aboutController.text = userDoc['about'] ?? '';
+        });
+      }
+    }
+  }
+
+  // Fungsi untuk menyimpan data pengguna ke Firestore
+  Future<void> _saveUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      try {
+        await _firestore.collection('users').doc(user.uid).set(
+            {
+              'name': _nameController.text,
+              'about': _aboutController.text,
+            },
+            SetOptions(
+                merge: true)); // Merge data agar tidak menimpa data lainnya
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile saved!')),
+        );
+        Navigator.pop(context); // Kembali ke halaman profil
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save profile.')),
+        );
+      }
+    }
   }
 
   @override
@@ -48,7 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 60,
-                    backgroundImage: AssetImage('assets/images/hh.jpg'),
+                    backgroundImage: AssetImage('assets/images/user.jpg'),
                   ),
                   Positioned(
                     bottom: 0,
@@ -158,15 +210,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     final name = _nameController.text;
                     final about = _aboutController.text;
 
-                    // Contoh logika untuk menyimpan data
                     if (name.isNotEmpty && about.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile saved!')),
-                      );
-                      Navigator.pop(context); // Kembali ke layar sebelumnya
+                      _saveUserData(); // Simpan perubahan
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill out all fields')),
+                        const SnackBar(
+                            content: Text('Please fill out all fields')),
                       );
                     }
                   },

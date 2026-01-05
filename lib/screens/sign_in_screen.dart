@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'home.dart';
+import 'admin_dashboard.dart'; // Import halaman AdminDashboard
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -9,27 +11,75 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  // Simulated login function
+  // Fungsi login
   Future<void> _login() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate a short delay for loading (remove if not needed)
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Login menggunakan FirebaseAuth
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
+      // Pengecekan jika email dan password adalah admin
+      if (_emailController.text.trim() == 'admin@gmail.com' &&
+          _passwordController.text.trim() == 'admin123') {
+        // Navigasi ke Dashboard Admin
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AdminDashboard()),
+        );
+      } else {
+        // Navigasi ke HomeScreen jika bukan admin
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      // Menangani error Firebase
+      String errorMessage = _getFirebaseAuthErrorMessage(e);
+      _showSnackBar(errorMessage, Colors.red);
+    } catch (e) {
+      // Menangani error lainnya
+      _showSnackBar(
+          'An unexpected error occurred. Please try again.', Colors.red);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
-    // Navigate directly to HomeScreen without authentication checks
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
+  // Mendapatkan pesan error dari FirebaseAuthException
+  String _getFirebaseAuthErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'No user found for that email.';
+      case 'wrong-password':
+        return 'Incorrect password.';
+      case 'invalid-email':
+        return 'The email address is not valid.';
+      default:
+        return 'An unknown error occurred!';
+    }
+  }
+
+  // Menampilkan SnackBar untuk feedback pengguna
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+      ),
     );
   }
 
@@ -49,16 +99,16 @@ class _SignInScreenState extends State<SignInScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 20),
                 TextField(
-                  controller: _usernameController,
+                  controller: _emailController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.grey[200],
-                    hintText: 'Username or Email',
+                    hintText: 'Email',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
@@ -115,8 +165,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(
-                            context, '/signUp'); // Navigate to Sign Up
+                        Navigator.pushNamed(context, '/signUp');
                       },
                       child: Text(
                         'Sign up',
@@ -138,7 +187,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }

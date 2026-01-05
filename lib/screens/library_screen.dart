@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/content_model.dart';
+import 'game_detail_screen.dart'; // Import halaman detail
 import 'friends_screen.dart';
 import 'home.dart';
 import 'profile_screen.dart';
-import 'sign_in_screen.dart'; // Import your sign-in screen here
-import 'game_detail_screen.dart'; // Import the game detail screen here
+import 'sign_in_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -17,179 +20,103 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-        break;
-      case 1:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const FriendsScreen()),
-        );
-        break;
-      case 2:
-        // Already on the Library page, no action needed
-        break;
-      case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-    }
+    setState(() => _selectedIndex = index);
+    if (index == 0) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    if (index == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+    if (index == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    User? user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF1D2733),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1D2733),
         elevation: 0,
+        title: const Text('LIBRARY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
-          },
-        ),
-        title: const Text(
-          'LIBRARY',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
-          ),
-        ],
-      ),
-      endDrawer: Drawer(
-        backgroundColor: const Color(0xFF1A1A2E),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              children: [
-                const DrawerHeader(
-                  decoration: BoxDecoration(
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  child: Text(
-                    'Menu',
-                    style: TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person_add, color: Colors.white),
-                  title: const Text('Friends',
-                      style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const FriendsScreen()),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading:
-                      const Icon(Icons.account_circle, color: Colors.white),
-                  title: const Text('Profile',
-                      style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-            // Log Out button at the bottom
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: ListTile(
-                leading: const Icon(Icons.logout, color: Colors.white),
-                title: const Text('Log Out',
-                    style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignInScreen()),
-                  );
-                },
-              ),
-            ),
-          ],
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            // Search box
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFA2B0BE),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search',
-                  hintStyle: TextStyle(color: Color(0xFF000000)),
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search, color: Colors.white),
-                  contentPadding: EdgeInsets.symmetric(vertical: 10.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Sort by:',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            // GestureDetector to navigate to GameDetailScreen
-            GestureDetector(
-              onTap: () {
-                // Navigate to GameDetailScreen when image is tapped
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => GameDetailScreen()),
+      body: user == null 
+          ? const Center(child: Text("Please Login", style: TextStyle(color: Colors.white)))
+          : StreamBuilder<DocumentSnapshot>(
+              // 1. Ambil data User dulu untuk melihat Library-nya
+              stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+              builder: (context, userSnapshot) {
+                if (!userSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+                
+                // Ambil array 'library' dari dokumen user
+                List<dynamic> libraryIds = (userSnapshot.data!.data() as Map<String, dynamic>)['library'] ?? [];
+
+                if (libraryIds.isEmpty) {
+                  return const Center(child: Text("You haven't bought any games yet.", style: TextStyle(color: Colors.grey)));
+                }
+
+                // 2. Ambil Data Game berdasarkan ID yang ada di Library
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('games').snapshots(),
+                  builder: (context, gameSnapshot) {
+                    if (!gameSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                    // Filter game: Hanya tampilkan jika ID-nya ada di libraryIds user
+                    List<ContentModel> myGames = gameSnapshot.data!.docs
+                        .map((doc) => ContentModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+                        .where((game) => libraryIds.contains(game.id))
+                        .toList();
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, // Tampilan library biasanya lebih kecil (3 kolom)
+                        childAspectRatio: 0.7,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: myGames.length,
+                      itemBuilder: (context, index) {
+                        final game = myGames[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => GameDetailScreen(game: game)), // Pass ContentModel
+                            );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    game.coverUrl,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (_,__,___) => Container(color: Colors.grey),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                game.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
                 );
               },
-              child: Container(
-                width: 100,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(8),
-                  image: const DecorationImage(
-                    image:
-                        AssetImage('assets/images/got.jpg'), // Your image path
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
             ),
-          ],
-        ),
-      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: const Color(0xFF171A21),
@@ -198,22 +125,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_add),
-            label: 'Add Friend',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.archive),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
+          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Library'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

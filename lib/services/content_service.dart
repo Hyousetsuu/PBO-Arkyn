@@ -1,46 +1,86 @@
-// lib/services/content_service.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/content_model.dart';
 
 class ContentService {
-  // Simulasi database menggunakan List
-  final List<ContentModel> _contents = [];
+  // Referensi ke koleksi 'games' di Firestore
+  final CollectionReference _gamesCollection =
+      FirebaseFirestore.instance.collection('games');
 
-  void addContent(ContentModel content) {
-    content = ContentModel(
-      id: DateTime.now().millisecondsSinceEpoch,
-      name: content.name,
-      category: content.category,
-      price: content.price,
-      about: content.about,
-    );
-    _contents.add(content);
-  }
-
-  // Read: Mendapatkan semua konten
-  List<ContentModel> getAllContents() {
-    return _contents;
-  }
-
-  // Read: Mendapatkan konten berdasarkan ID
-  ContentModel? getContentById(int id) {
+  // CREATE: Menambah game baru (Biasanya dipakai oleh Admin / UploadGameScreen)
+  // Catatan: ID akan dibuat otomatis oleh Firestore
+  Future<void> addGame(ContentModel game) async {
     try {
-      return _contents.firstWhere((content) => content.id == id);
+      await _gamesCollection.add(game.toMap());
     } catch (e) {
+      print("Error adding game: $e");
+      rethrow;
+    }
+  }
+
+  // READ: Mendapatkan semua game secara Realtime (Stream)
+  // Dipakai di HomeScreen agar kalau ada game baru langsung muncul
+  Stream<List<ContentModel>> getGamesStream() {
+    return _gamesCollection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        // Mengubah data JSON dari Firestore menjadi object ContentModel
+        return ContentModel.fromMap(
+          doc.data() as Map<String, dynamic>,
+          doc.id, // Ambil ID dokumen dari Firestore
+        );
+      }).toList();
+    });
+  }
+
+  // READ: Mendapatkan satu game spesifik berdasarkan ID
+  Future<ContentModel?> getGameById(String id) async {
+    try {
+      DocumentSnapshot doc = await _gamesCollection.doc(id).get();
+      if (doc.exists) {
+        return ContentModel.fromMap(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }
+      return null;
+    } catch (e) {
+      print("Error getting game: $e");
       return null;
     }
   }
 
-  // Update: Memperbarui konten
-  void updateContent(ContentModel updatedContent) {
-    final index =
-        _contents.indexWhere((content) => content.id == updatedContent.id);
-    if (index != -1) {
-      _contents[index] = updatedContent;
+  // UPDATE: Memperbarui data game
+  Future<void> updateGame(ContentModel game) async {
+    try {
+      await _gamesCollection.doc(game.id).update(game.toMap());
+    } catch (e) {
+      print("Error updating game: $e");
+      rethrow;
     }
   }
 
-  // Delete: Menghapus konten
-  void deleteContent(int id) {
-    _contents.removeWhere((content) => content.id == id);
+  // DELETE: Menghapus game
+  Future<void> deleteGame(String id) async {
+    try {
+      await _gamesCollection.doc(id).delete();
+    } catch (e) {
+      print("Error deleting game: $e");
+      rethrow;
+    }
+  }
+  
+  // SEARCH: Mencari game berdasarkan nama (Case sensitive di Firestore standar)
+  Stream<List<ContentModel>> searchGames(String query) {
+    return _gamesCollection
+        .where('name', isGreaterThanOrEqualTo: query)
+        .where('name', isLessThanOrEqualTo: query + '\uf8ff')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return ContentModel.fromMap(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }).toList();
+    });
   }
 }

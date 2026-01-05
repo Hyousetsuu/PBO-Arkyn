@@ -1,10 +1,11 @@
-import 'package:arkyn/widgets/DetailScreen.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/content_model.dart'; // Pastikan path ini benar
+import 'game_detail_page.dart';
+import 'game_detail_screen.dart'; // Sesuaikan nama file; // Gunakan halaman detail yang baru kita fix
 import 'friends_screen.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
-import '../widgets/game.dart'; // Import Game model
-import '../widgets/list_of_games.dart'; // Import list_of_games
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,156 +18,64 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Fungsi untuk mengubah tampilan berdasarkan tab yang dipilih
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    switch (index) {
-      case 1:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const FriendsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LibraryScreen()),
-        );
-        break;
-      case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-      default:
-        // Tetap di HomeScreen untuk index 0
-        break;
-    }
+    setState(() => _selectedIndex = index);
+    if (index == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+    if (index == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
+    if (index == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color.fromARGB(255, 27, 40, 56),
+      backgroundColor: const Color(0xFF1B2838),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        elevation: 0,
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          margin: const EdgeInsets.symmetric(horizontal: 1.0),
-          width: MediaQuery.of(context).size.width * 0.8,
-          decoration: BoxDecoration(
-            color: const Color(0xFFA2B0BE),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.search, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search',
-                    hintStyle: TextStyle(color: Color(0xFF000000)),
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        backgroundColor: const Color(0xFF171A21),
+        title: const Text('Store', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
+           IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {}, // Nanti tambahkan fitur search
           ),
         ],
       ),
-      endDrawer: Drawer(
-        backgroundColor: const Color(0xFF1A1A2E),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Color(0xFF1A1A2E),
-              ),
-              child: Text(
-                'Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
+      body: StreamBuilder<QuerySnapshot>(
+        // Mengambil data dari koleksi 'games' yang sudah diapprove admin
+        stream: FirebaseFirestore.instance.collection('games').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No games available yet", style: TextStyle(color: Colors.white)));
+          }
+
+          // Konversi Data Firestore ke List<ContentModel>
+          List<ContentModel> allGames = snapshot.data!.docs.map((doc) {
+             return ContentModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          }).toList();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section 1: Featured / Recommended
+                const Text('Featured & Recommended', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                _buildHorizontalList(allGames, isBig: true),
+
+                const SizedBox(height: 24),
+
+                // Section 2: Special Offers (Misal kita tampilkan semua game lagi dengan style beda)
+                const Text('Special Offers', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                _buildHorizontalList(allGames.reversed.toList(), isBig: false), // Reversed biar urutannya beda
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.archive, color: Colors.white),
-              title:
-                  const Text('Library', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const LibraryScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_circle, color: Colors.white),
-              title:
-                  const Text('Profile', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ProfileScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recommended for you',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildHorizontalList(games),
-            const SizedBox(height: 24),
-            const Text(
-              'Special Offers',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildHorizontalList(games, isRectangle: true),
-            const SizedBox(height: 24),
-            const Text(
-              'Because you play Ghost of Tsushima',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            // Display the games in the "Because you play Ghost of Tsushima" section
-            _buildHorizontalList(games1, isRectangle: true),
-          ],
-        ),
+          );
+        },
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -176,69 +85,72 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_add), label: 'Add Friend'),
-          BottomNavigationBarItem(icon: Icon(Icons.archive), label: 'Library'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.account_circle), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Store'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
+          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Library'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 
-  Widget _buildHorizontalList(List<Game> items, {bool isRectangle = false}) {
+  Widget _buildHorizontalList(List<ContentModel> games, {bool isBig = false}) {
     return SizedBox(
-      height: isRectangle ? 150 : 200,
+      height: isBig ? 220 : 160,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: items.length,
+        itemCount: games.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          var item = items[index];
-
+          final game = games[index];
           return GestureDetector(
             onTap: () {
-              // Navigasi ke halaman detail dengan data dinamis
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DetailScreen(
-                    game: item,
-                    title: item.title,
-                    image: item.imageUrl,
-                    description: item.description,
-                    developer: item.developer,
-                    price: item.price,
-                    categories: item.categories,
-                  ), // Pass the whole game object
+                  // Pastikan memanggil GameDetailScreen dan mengirim data 'game'
+                  builder: (_) => GameDetailScreen(game: game), 
                 ),
               );
             },
             child: Container(
-              width: isRectangle ? 200 : 120,
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 42, 71, 94),
-                borderRadius: BorderRadius.all(Radius.circular(8.0)),
+              width: isBig ? 300 : 120, // Ukuran lebar beda
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A475E),
+                borderRadius: BorderRadius.circular(8.0),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Gambar Game
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(item.imageUrl),
-                          fit: BoxFit.cover,
-                        ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      child: Image.network(
+                        game.coverUrl,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => Container(color: Colors.grey, child: const Icon(Icons.broken_image)),
                       ),
                     ),
                   ),
-                  Container(
+                  // Info Game
+                  Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'Rp ${item.price}',
-                      style: const TextStyle(color: Colors.white),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Rp ${game.price.toStringAsFixed(0)}',
+                          style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                        ),
+                      ],
                     ),
                   ),
                 ],
