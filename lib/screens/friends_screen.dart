@@ -21,8 +21,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
   final TextEditingController _friendEmailController = TextEditingController();
   bool _isLoading = false;
 
-  // --- LOGIKA ADD FRIEND ---
+  // --- LOGIKA ADD FRIEND (DIPERBAIKI: MUTUAL ADD) ---
   Future<void> _addFriend() async {
+    // 1. Pastikan email lowercase agar pencarian akurat
     String email = _friendEmailController.text.trim().toLowerCase();
     if (email.isEmpty) return;
 
@@ -32,7 +33,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     if (currentUser == null) return;
 
     try {
-      // 1. Cari user lain berdasarkan email
+      // 2. Cari user lain berdasarkan email
       QuerySnapshot query = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: email)
@@ -47,7 +48,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       // Ambil data teman
       var friendDoc = query.docs.first;
       String friendId = friendDoc.id;
-      String friendName = friendDoc['username'] ?? friendDoc['email'];
+      String friendName = (friendDoc.data() as Map<String, dynamic>)['username'] ?? email;
 
       // Cek agar tidak add diri sendiri
       if (friendId == currentUser.uid) {
@@ -56,12 +57,27 @@ class _FriendsScreenState extends State<FriendsScreen> {
         return;
       }
 
-      // 2. Tambahkan UID teman ke array 'friends' di dokumen kita
-      await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
+      // 3. PROSES SIMPAN DUA ARAH (BATCH WRITE)
+      // Kita gunakan Batch agar data masuk ke User 1 DAN User 2 secara bersamaan
+      WriteBatch batch = FirebaseFirestore.instance.batch();
+
+      DocumentReference myDoc = FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+      DocumentReference friendRef = FirebaseFirestore.instance.collection('users').doc(friendId);
+
+      // A. Masukkan ID Teman ke list 'friends' SAYA
+      batch.update(myDoc, {
         'friends': FieldValue.arrayUnion([friendId])
       });
 
-      _showSnackBar('Berhasil menambahkan $friendName!', Colors.green);
+      // B. Masukkan ID Saya ke list 'friends' TEMAN
+      batch.update(friendRef, {
+        'friends': FieldValue.arrayUnion([currentUser.uid])
+      });
+
+      // Jalankan kedua perintah di atas
+      await batch.commit();
+
+      _showSnackBar('Berhasil berteman dengan $friendName!', Colors.green);
       Navigator.pop(context); // Tutup dialog
       _friendEmailController.clear();
 
@@ -140,7 +156,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ),
         ],
       ),
-      endDrawer: _buildDrawer(), // Drawer dipisah biar rapi
+      endDrawer: _buildDrawer(), 
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -162,12 +178,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // TOMBOL ADD FRIEND (Sekarang Bisa Diklik)
+            // TOMBOL ADD FRIEND
             GestureDetector(
-              onTap: _showAddFriendDialog, // Panggil Dialog saat diklik
+              onTap: _showAddFriendDialog,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(color: const Color(0xFF66C0F4), borderRadius: BorderRadius.circular(4)), // Warna Biru Steam
+                decoration: BoxDecoration(color: const Color(0xFF66C0F4), borderRadius: BorderRadius.circular(4)),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -199,18 +215,23 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           return const Center(child: Text('No friends yet. Add one!', style: TextStyle(color: Colors.white54)));
                         }
 
-                        // Mengambil detail setiap teman berdasarkan ID mereka
-                        // Note: Ini cara sederhana (client-side join). Untuk scale besar sebaiknya query terpisah.
+                        // Menampilkan list teman
                         return ListView.builder(
                           itemCount: friendsList.length,
                           itemBuilder: (context, index) {
                             String friendId = friendsList[index];
                             
+                            // Ambil detail teman secara real-time
                             return FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance.collection('users').doc(friendId).get(),
                               builder: (context, friendSnapshot) {
-                                if (!friendSnapshot.hasData) return const SizedBox(); // Loading state hidden
-                                var friendData = friendSnapshot.data!.data() as Map<String, dynamic>;
+                                if (!friendSnapshot.hasData) return const SizedBox(); 
+                                
+                                var friendData = friendSnapshot.data!.data() as Map<String, dynamic>?;
+                                if (friendData == null) return const SizedBox(); // Jika user dihapus
+
+                                String friendName = friendData['username'] ?? 'Unknown';
+                                String friendPhoto = friendData['photo_url'] ?? '';
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -219,9 +240,14 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                   child: Row(
                                     children: [
                                       // Avatar Teman
-                                      const CircleAvatar(
+                                      CircleAvatar(
                                         backgroundColor: Colors.blueGrey,
-                                        child: Icon(Icons.person, color: Colors.white),
+                                        backgroundImage: friendPhoto.isNotEmpty 
+                                          ? NetworkImage(friendPhoto) 
+                                          : null,
+                                        child: friendPhoto.isEmpty 
+                                          ? const Icon(Icons.person, color: Colors.white) 
+                                          : null,
                                       ),
                                       const SizedBox(width: 12),
                                       // Nama & Status
@@ -229,11 +255,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            friendData['username'] ?? 'Unknown',
+                                            friendName,
                                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                           ),
                                           const Text(
-                                            'Online', // Status dummy (bisa dikembangkan nanti)
+                                            'Online', 
                                             style: TextStyle(color: Colors.lightBlueAccent, fontSize: 12),
                                           ),
                                         ],
@@ -268,7 +294,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
     );
   }
 
-  // Helper untuk Drawer (supaya kode build lebih bersih)
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: const Color(0xFF1A1A2E),
