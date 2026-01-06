@@ -13,14 +13,14 @@
     if (kIsWeb) {
       // Inisialisasi Firebase untuk Web
       await Firebase.initializeApp(
-        options: FirebaseOptions(
-          apiKey:
-              "AIzaSyDSLhr-ztYTdGouAgS0K4f9K9pr2c_V7Pw", // Ganti dengan apiKey Anda
-          appId:
-              "1:914451946370:android:c02fe4058e72b6ba4dcd9b", // Ganti dengan appId Anda
-          messagingSenderId: "", // Ganti dengan messagingSenderId Anda
-          projectId: "arkyn-29edb", // Ganti dengan projectId Anda
-          // Option lain sesuai kebutuhan
+        options: const FirebaseOptions(
+          apiKey: "AIzaSyDSLhr-ztYTdGouAgS0K4f9K9pr2c_V7Pw",
+          appId: "1:914451946370:android:c02fe4058e72b6ba4dcd9b",
+          messagingSenderId: "914451946370", // Saya bantu isi sender ID dari AppID Anda (bagian depan sebelum :)
+          projectId: "arkyn-29edb",
+          
+          // --- TAMBAHKAN BARIS INI ---
+          storageBucket: "arkyn-29edb.appspot.com", 
         ),
       );
     } else {

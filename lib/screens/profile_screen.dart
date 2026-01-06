@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'package:arkyn/screens/sign_in_screen.dart'; // Make sure you have this screen for Login
+import 'package:arkyn/screens/sign_in_screen.dart'; // Pastikan path benar
 import 'package:flutter/material.dart';
-import 'upload_game.dart'; // Import file upload_game.dart
+import 'upload_game.dart'; 
 import 'edit_profile.dart';
-import 'home.dart'; // Import halaman Home untuk kembali ke halaman Home
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth for sign out
+import 'home.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
 import 'library_screen.dart';
 import 'friends_screen.dart';
 
@@ -22,7 +22,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Variabel untuk menyimpan informasi pengguna
   String name = '';
   String userEmail = '';
-  String about = ''; // Variabel untuk menyimpan "about" dari Firestore
+  String about = '';
+  String photoUrl = ''; // Variabel URL Foto
 
   @override
   void initState() {
@@ -30,25 +31,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _getUserInfo();
   }
 
-  // Fungsi untuk mendapatkan informasi pengguna
+  // Fungsi untuk mendapatkan informasi pengguna (DIPERBAIKI)
   void _getUserInfo() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // Set email dulu karena data ini sudah ada di Auth
       setState(() {
         userEmail = user.email ?? 'No email';
       });
 
-      // Mengambil data name dan about dari koleksi bio di Firestore
+      // Ambil data detail dari Firestore
       FirebaseFirestore.instance
-          .collection('users')
+          .collection('users') // Pastikan pakai 'users'
           .doc(user.uid)
           .get()
           .then((docSnapshot) {
         if (docSnapshot.exists) {
-          setState(() {
-            name = docSnapshot['name'] ?? user.email?.split('@')[0] ?? 'User';
-            about = docSnapshot['about'] ?? 'No information available.';
-          });
+          Map<String, dynamic> data = docSnapshot.data() as Map<String, dynamic>;
+          if (mounted) { // Cek mounted agar tidak error jika layar sudah ditutup
+            setState(() {
+              // Ambil data dengan fallback yang aman
+              photoUrl = data['photo_url'] ?? ''; 
+              name = data['username'] ?? data['name'] ?? user.email?.split('@')[0] ?? 'User';
+              about = data['about'] ?? 'No information available.';
+            });
+          }
         }
       });
     }
@@ -58,7 +65,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logOut() async {
     try {
       await FirebaseAuth.instance.signOut();
-      // Navigating to LoginScreen after logging out
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -77,34 +83,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return false;
   }
 
-  // Fungsi untuk menanggapi perubahan pada BottomNavigationBar
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
 
-    // Navigasi berdasarkan index yang dipilih
     switch (index) {
       case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
         break;
       case 1:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const FriendsScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const FriendsScreen()));
         break;
       case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LibraryScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LibraryScreen()));
         break;
       case 3:
-        // Tetap di halaman ProfileScreen
         break;
     }
   }
@@ -147,18 +141,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: EdgeInsets.zero,
             children: [
               const DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Color(0xFF1A1A2E),
-                ),
-                child: Text(
-                  'Menu',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
-                ),
+                decoration: BoxDecoration(color: Color(0xFF1A1A2E)),
+                child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
               ),
               ListTile(
                 leading: const Icon(Icons.exit_to_app, color: Colors.white),
-                title: const Text('Log Out',
-                    style: TextStyle(color: Colors.white)),
+                title: const Text('Log Out', style: TextStyle(color: Colors.white)),
                 onTap: _logOut,
               ),
             ],
@@ -170,13 +158,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                const CircleAvatar(
+                
+                // --- BAGIAN FOTO PROFIL (DIPERBAIKI) ---
+                CircleAvatar(
                   radius: 60,
-                  backgroundImage: AssetImage('assets/images/user.png'),
+                  backgroundColor: const Color(0xFF2A475E),
+                  // Logika: Jika photoUrl ada isinya, pakai NetworkImage. Jika tidak, pakai aset lokal.
+                  backgroundImage: photoUrl.isNotEmpty
+                      ? NetworkImage(photoUrl) as ImageProvider
+                      : const AssetImage('assets/images/user.png'),
                 ),
+                // ---------------------------------------
+
                 const SizedBox(height: 10),
                 Text(
-                  name, // Menampilkan nama pengguna (field name)
+                  name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -184,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 Text(
-                  userEmail, // Menampilkan email pengguna
+                  userEmail,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 16,
@@ -207,16 +203,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 4.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                   child: Container(
                     padding: const EdgeInsets.all(45),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2E2E3D),
                       borderRadius: BorderRadius.circular(10),
                     ),
+                    width: double.infinity, // Agar lebar container konsisten
                     child: Text(
-                      about, // Menampilkan tentang pengguna (field about)
+                      about,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -240,16 +236,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      // Tunggu hasil edit, lalu refresh
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const EditProfileScreen(),
                         ),
                       );
+                      _getUserInfo(); // Refresh tampilan setelah kembali
                     },
                     child: const Text(
                       'Edit profile',
@@ -262,14 +259,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => UploadGameScreen(),
+                          builder: (context) => const UploadGameScreen(), // Tambah const jika bisa
                         ),
                       );
                     },
@@ -289,17 +285,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           selectedItemColor: Colors.blue,
           unselectedItemColor: Colors.grey,
           currentIndex: _selectedIndex,
-          onTap:
-              _onItemTapped, // Memastikan onTap mengarah ke fungsi _onItemTapped
+          onTap: _onItemTapped,
           items: const [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.shopping_cart), label: 'Home'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person_add), label: 'Friends'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.archive), label: 'Library'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.account_circle), label: 'Profile'),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_add), label: 'Friends'),
+            BottomNavigationBarItem(icon: Icon(Icons.archive), label: 'Library'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_circle), label: 'Profile'),
           ],
         ),
       ),

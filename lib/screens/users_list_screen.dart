@@ -7,32 +7,32 @@ class UsersListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text(
-          'All Users',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-      body: FutureBuilder<List<UserCardData>>(
+    // KITA HAPUS SCAFFOLD & APPBAR 
+    // Agar tampilan ini menjadi bagian (widget) dari Admin Dashboard
+    return Container(
+      color: const Color(0xFF1B2B45), // Samakan background dengan Admin Dashboard
+      child: FutureBuilder<List<UserCardData>>(
         future: _fetchUsersFromFirestore(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Colors.white));
           }
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error: ${snapshot.error.toString()}', // Menampilkan error yang lebih jelas
-                style: TextStyle(color: Colors.white),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Error: ${snapshot.error.toString()}', 
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
+            return const Center(
               child: Text(
                 'No users found',
                 style: TextStyle(color: Colors.white),
@@ -43,19 +43,19 @@ class UsersListScreen extends StatelessWidget {
           final users = snapshot.data!;
 
           return ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 80), // Tambah padding bawah agar tidak tertutup navbar
             itemCount: users.length,
             itemBuilder: (context, index) {
               final user = users[index];
               return UserCard(
                 name: user.name,
                 email: user.email,
-                onDelete: () => _deleteUser(user.email),
+                onDelete: () => _deleteUser(context, user.email),
               );
             },
           );
         },
       ),
-      backgroundColor: Colors.blueGrey[900],
     );
   }
 
@@ -64,21 +64,31 @@ class UsersListScreen extends StatelessWidget {
     try {
       final QuerySnapshot snapshot =
           await FirebaseFirestore.instance.collection('users').get();
+      
       return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Cek 'username' (baru) atau 'name' (lama)
+        String displayName = 'No Name';
+        if (data.containsKey('username')) {
+          displayName = data['username'];
+        } else if (data.containsKey('name')) {
+          displayName = data['name'];
+        }
+
         return UserCardData(
-          name: doc['name'] ?? 'No Name', // Default jika field tidak ada
-          email: doc['email'] ?? 'No Email', // Default jika field tidak ada
+          name: displayName, 
+          email: data['email'] ?? 'No Email', 
         );
       }).toList();
     } catch (e) {
-      // Menampilkan error jika gagal mengambil data
       print('Error fetching users: $e');
       throw Exception('Error fetching users: $e');
     }
   }
 
-  // Menghapus pengguna berdasarkan email
-  Future<void> _deleteUser(String email) async {
+  // Menghapus pengguna
+  Future<void> _deleteUser(BuildContext context, String email) async {
     try {
       final QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -89,9 +99,17 @@ class UsersListScreen extends StatelessWidget {
         await doc.reference.delete();
       }
 
-      print('User with email $email has been deleted.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User $email has been deleted'), backgroundColor: Colors.red),
+      );
+      
+      // Note: Di real production, kita biasanya perlu me-refresh tampilan (setState) 
+      // tapi karena kita pakai FutureBuilder, user harus pindah tab dulu baru balik lagi utk refresh list,
+      // atau kita bisa ubah jadi StreamBuilder nanti.
     } catch (e) {
-      print('Error deleting user: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting user: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 }
@@ -117,10 +135,11 @@ class UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.blueGrey[800],
-      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: const Color(0xFF253044),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -129,22 +148,19 @@ class UserCard extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   email,
-                  style: TextStyle(color: Colors.white70),
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ],
             ),
-            ElevatedButton(
+            IconButton(
               onPressed: onDelete,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text('Delete'),
+              icon: const Icon(Icons.delete, color: Colors.red),
             ),
           ],
         ),
