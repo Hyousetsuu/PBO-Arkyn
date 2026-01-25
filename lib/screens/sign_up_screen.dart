@@ -18,17 +18,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Fungsi Validasi Input
   String? _validateInput() {
-    if (_usernameController.text.isEmpty) {
-      return 'Please enter a username!';
+    if (_usernameController.text.trim().isEmpty) {
+      return 'Please enter a username.';
     }
-    if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
-      return 'Please enter a valid email!';
+    if (_usernameController.text.trim().length < 3) {
+      return 'Username must be at least 3 characters long.';
+    }
+    if (_emailController.text.trim().isEmpty) {
+      return 'Please enter your email address.';
+    }
+    if (!_emailController.text.trim().contains('@') || !_emailController.text.trim().contains('.')) {
+      return 'Please enter a valid email address (e.g., user@example.com).';
+    }
+    if (_passwordController.text.isEmpty) {
+      return 'Please enter a password.';
     }
     if (_passwordController.text.length < 6) {
-      return 'Password must be at least 6 characters!';
+      return 'Password must be at least 6 characters long.';
+    }
+    if (_confirmPasswordController.text.isEmpty) {
+      return 'Please confirm your password.';
     }
     if (_passwordController.text != _confirmPasswordController.text) {
-      return 'Passwords do not match!';
+      return 'Passwords do not match. Please check and try again.';
     }
     return null;
   }
@@ -64,15 +76,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
       }
 
-      _showSnackBar('Sign up successful! Please log in.', Colors.green);
+      _showSnackBar('Account created successfully! Please sign in.', Colors.green);
       Navigator.pop(context);
       
     } on FirebaseAuthException catch (e) {
-      _showSnackBar(e.message ?? 'An error occurred', Colors.red);
+      String errorMessage = _getFirebaseAuthErrorMessage(e);
+      _showSnackBar(errorMessage, Colors.red);
     } catch (e) {
-      _showSnackBar('Error: $e', Colors.red);
+      _showSnackBar('Unexpected error: ${e.toString()}. Please try again.', Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _getFirebaseAuthErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'This email is already registered. Please sign in or use a different email.';
+      case 'invalid-email':
+        return 'Invalid email format. Please enter a valid email address.';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled. Please contact support.';
+      case 'weak-password':
+        return 'Password is too weak. Please use a stronger password.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      default:
+        return e.message ?? 'Registration failed. Please try again.';
     }
   }
 
@@ -84,80 +114,127 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final padding = isMobile ? 24.0 : 32.0;
+    final maxWidth = isMobile ? double.infinity : 400.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFF3B4B61),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Sign Up',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              
-              // Input Username (Penting untuk profile)
-              TextField(
-                controller: _usernameController,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                decoration: _inputDecoration('Username'),
-              ),
-              const SizedBox(height: 10),
-
-              // Input Email
-              TextField(
-                controller: _emailController,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                decoration: _inputDecoration('Email'),
-              ),
-              const SizedBox(height: 10),
-
-              // Input Password
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                decoration: _inputDecoration('Password'),
-              ),
-              const SizedBox(height: 10),
-
-              // Confirm Password
-              TextField(
-                controller: _confirmPasswordController,
-                obscureText: true,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                decoration: _inputDecoration('Confirm Password'),
-              ),
-              const SizedBox(height: 20),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: _isLoading ? null : _signUp,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Sign Up', style: TextStyle(color: Colors.white, fontSize: 18)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
+          child: Padding(
+            padding: EdgeInsets.all(padding),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text("Already have an account? ", style: TextStyle(color: Colors.white)),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Sign in', style: TextStyle(color: Colors.blueAccent)),
+                  const Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  
+                  // Input Username (Penting untuk profile)
+                  TextField(
+                    controller: _usernameController,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: _inputDecoration('Username'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Input Email
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: _inputDecoration('Email'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Input Password
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: _inputDecoration('Password'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm Password
+                  TextField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: _inputDecoration('Confirm Password'),
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: _isLoading ? null : _signUp,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Already have an account? ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                        ),
+                        child: Text(
+                          'Sign in',
+                          style: TextStyle(
+                            color: Colors.blue[300],
+                            fontSize: 14,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -167,10 +244,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
   InputDecoration _inputDecoration(String hintText) {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.grey[200], // Latar belakang putih/abu agar teks terlihat
+      fillColor: Colors.grey[200],
       hintText: hintText,
-      hintStyle: const TextStyle(color: Colors.grey),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      hintStyle: TextStyle(color: Colors.grey[600]),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 16,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
     );
   }
 }
