@@ -3,6 +3,8 @@ class UserModel {
   final String email;
   final String username; // Ganti 'name' jadi 'username' agar lebih relevan utk gamer
   final double walletBalance; // Penting: Saldo user
+  final double totalTopup;
+  final double totalSpent;
   final List<String> library; // Penting: Daftar ID game yang sudah dibeli
   final List<String> wishlist; // Fitur tambahan: Game yang diinginkan
 
@@ -11,6 +13,8 @@ class UserModel {
     required this.email,
     required this.username,
     this.walletBalance = 0.0,
+    this.totalTopup = 0.0,
+    this.totalSpent = 0.0,
     this.library = const [],
     this.wishlist = const [],
   });
@@ -22,6 +26,8 @@ class UserModel {
       username: data['username'] ?? '',
       // Konversi aman ke double (kadang Firestore simpan int jika bulat)
       walletBalance: (data['wallet_balance'] ?? 0).toDouble(),
+      totalTopup: (data['total_topup'] ?? 0).toDouble(),
+      totalSpent: (data['total_spent'] ?? 0).toDouble(),
       // Konversi List<dynamic> ke List<String>
       library: List<String>.from(data['library'] ?? []),
       wishlist: List<String>.from(data['wishlist'] ?? []),
@@ -33,6 +39,8 @@ class UserModel {
       'email': email,
       'username': username,
       'wallet_balance': walletBalance,
+      'total_topup': totalTopup,
+      'total_spent': totalSpent,
       'library': library,
       'wishlist': wishlist,
     };
