@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/content_model.dart'; // Pastikan path ini benar
-import 'game_detail_page.dart';
 import 'game_detail_screen.dart'; // Sesuaikan nama file; // Gunakan halaman detail yang baru kita fix
 import 'friends_screen.dart';
 import 'library_screen.dart';

@@ -129,7 +129,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   // --- LOGIKA NAVIGASI ---
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
-    if (index == 0) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    if (index == 0) Navigator.pushReplacementNamed(context, '/home');
     if (index == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
     if (index == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }

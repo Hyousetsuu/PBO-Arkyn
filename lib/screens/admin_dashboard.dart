@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/game_card.dart';
+import 'game_detail_screen.dart';
+import 'admin_game_detail.dart';
+import '../models/content_model.dart'; 
+import 'game_detail_screen.dart';
 import 'users_list_screen.dart'; // Import the UsersListScreen
 import 'requestadmin.dart'; // Import the RequestAdmin
 import 'admin_finance.dart'; // Import the DeveloperFundsPage
@@ -188,16 +193,22 @@ class _GamesPageState extends State<GamesPage> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final data = docs[index].data() as Map<String, dynamic>;
-                  
-                  // PERBAIKAN DATA ERROR:
-                  // Gunakan 'cover_url' (sesuai model) dan berikan default value jika kosong
-                  String imageUrl = data.containsKey('cover_url') 
-                      ? data['cover_url'] 
-                      : (data.containsKey('imageUrl') ? data['imageUrl'] : 'https://placehold.co/600x400');
+                  final String docId = docs[index].id;
 
-                  return GameCard(
-                    name: data['name'] ?? 'No Name',
-                    imageUrl: imageUrl, 
+                  ContentModel game = ContentModel.fromMap(data, docId);
+
+                  return GameCard( // Pastikan ini GameCard dari widgets/
+                    name: game.name,
+                    imageUrl: game.coverUrl,
+                    onTap: () {
+                      // NAVIGASI KHUSUS ADMIN: Arahkan ke halaman Edit/Hapus Game
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminGameDetailScreen(game: game), // Halaman baru!
+                        ),
+                      );
+                    },
                   );
                 },
               );
@@ -209,64 +220,4 @@ class _GamesPageState extends State<GamesPage> {
   }
 }
 
-// 2. PERBAIKAN CLASS GameCard (Admin Version)
-class GameCard extends StatelessWidget {
-  final String name;
-  final String imageUrl;
 
-  const GameCard({
-    required this.name,
-    required this.imageUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A3B56),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gambar
-          Expanded( // Gunakan Expanded agar gambar mengisi sisa ruang
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(10),
-                topRight: Radius.circular(10),
-              ),
-              child: Image.network(
-                imageUrl,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey,
-                    child: const Center(
-                      child: Icon(Icons.broken_image, color: Colors.white),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // Teks Judul
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              name,
-              maxLines: 2, // Batasi maksimal 2 baris
-              overflow: TextOverflow.ellipsis, // Jika kepanjangan, beri titik-titik (...)
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14, // Kecilkan font sedikit jika perlu
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

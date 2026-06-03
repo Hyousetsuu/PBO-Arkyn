@@ -1,7 +1,7 @@
 class ContentModel {
   final String id;
   final String name;
-  final String category;
+  final List<String> categories;
   final double price;
   final String description; // Di DB mungkin tersimpan sebagai 'about'
   final String coverUrl;    // Di DB mungkin tersimpan sebagai 'imageUrl'
@@ -10,7 +10,7 @@ class ContentModel {
   ContentModel({
     required this.id,
     required this.name,
-    required this.category,
+    required this.categories,
     required this.price,
     required this.description,
     required this.coverUrl,
@@ -20,7 +20,7 @@ class ContentModel {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'category': category,
+      'category': categories,
       'price': price,
       'description': description,
       'cover_url': coverUrl,
@@ -32,7 +32,10 @@ class ContentModel {
     return ContentModel(
       id: documentId,
       name: map['name'] ?? 'No Name',
-      category: map['category'] ?? 'General',
+      // Jika data di DB adalah String, ubah jadi List. Jika sudah List, ambil langsung.
+      categories: map['category'] is List 
+          ? List<String>.from(map['category']) 
+          : [map['category'] ?? 'General'],
       
       // Handle konversi harga (Int ke Double) agar tidak error
       price: (map['price'] is int) 

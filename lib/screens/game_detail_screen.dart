@@ -25,7 +25,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   // Fungsi Navigasi Bottom Bar
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
-    if (index == 0) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    if (index == 0) Navigator.pushReplacementNamed(context, '/home');
     if (index == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
     if (index == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
     if (index == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
@@ -140,15 +140,18 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   const SizedBox(height: 20),
 
                   // CATEGORY
-                  const Text("Category", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("Categories", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Chip(
-                    label: Text(widget.game.category, style: const TextStyle(color: Colors.white)),
-                    backgroundColor: const Color(0xFF2A475E),
+                  Wrap(
+                    spacing: 8.0,
+                    children: widget.game.categories.map((cat) {
+                      return Chip(
+                        label: Text(cat, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        backgroundColor: const Color(0xFF2A475E),
+                      );
+                    }).toList(),
                   ),
-
-                  const SizedBox(height: 24),
-
+                  
                   // PRICE BOX & BUY BUTTON
                   Container(
                     padding: const EdgeInsets.all(16),
