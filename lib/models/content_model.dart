@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ContentModel {
   final String id;
   final String name;
@@ -6,6 +8,7 @@ class ContentModel {
   final String description; // Di DB mungkin tersimpan sebagai 'about'
   final String coverUrl;    // Di DB mungkin tersimpan sebagai 'imageUrl'
   final String developer;
+  final DateTime? uploadedAt;
 
   ContentModel({
     required this.id,
@@ -15,6 +18,7 @@ class ContentModel {
     required this.description,
     required this.coverUrl,
     required this.developer,
+    this.uploadedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +29,7 @@ class ContentModel {
       'description': description,
       'cover_url': coverUrl,
       'developer': developer,
+      'uploadedAt': uploadedAt != null ? Timestamp.fromDate(uploadedAt!) : null,
     };
   }
 
@@ -49,6 +54,14 @@ class ContentModel {
       coverUrl: map['cover_url'] ?? map['imageUrl'] ?? 'https://placehold.co/600x400/png',
       
       developer: map['developer'] ?? map['developer_name'] ?? 'Unknown Developer',
+      
+      uploadedAt: map['uploadedAt'] is Timestamp
+          ? (map['uploadedAt'] as Timestamp).toDate()
+          : map['uploadedAt'] != null
+              ? DateTime.tryParse(map['uploadedAt'].toString())
+              : map['created_at'] is Timestamp
+                  ? (map['created_at'] as Timestamp).toDate()
+                  : null,
     );
   }
 }
