@@ -74,10 +74,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
               });
             },
             itemBuilder: (ctx) => [
-              const PopupMenuItem(value: 'RecentlyAdded', child: Text('Recently Added')),
-              const PopupMenuItem(value: 'PriceLowHigh', child: Text('Price: Low to High')),
-              const PopupMenuItem(value: 'PriceHighLow', child: Text('Price: High to Low')),
-              const PopupMenuItem(value: 'Alphabetical', child: Text('Alphabetical (A–Z)')),
+              const PopupMenuItem(value: 'RecentlyAdded', child: Text('Recently Added', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(value: 'PriceLowHigh', child: Text('Price: Low to High', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(value: 'PriceHighLow', child: Text('Price: High to Low', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(value: 'Alphabetical', child: Text('Alphabetical (A–Z)', style: TextStyle(color: Colors.white))),
             ],
             color: const Color(0xFF171A21),
           ),
