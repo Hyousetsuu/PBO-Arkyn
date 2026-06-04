@@ -74,10 +74,14 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           double newSpent = totalSpent + widget.game.price;
           List<dynamic> updatedLibrary = List.from(library)..add(widget.game.id);
           
+          List<dynamic> wishlist = userData['wishlist'] ?? [];
+          List<dynamic> updatedWishlist = List.from(wishlist)..remove(widget.game.id);
+          
           transaction.update(userDoc, {
             'wallet_balance': newBalance,
             'total_spent': newSpent,
             'library': updatedLibrary,
+            'wishlist': updatedWishlist,
           });
 
           // Buat data transaksi di subkoleksi 'wallet_transactions'
@@ -419,12 +423,16 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       builder: (context, userSnapshot) {
         bool isOwned = false;
         double currentBalance = 0.0;
+        List<dynamic> wishlist = [];
+        bool isWishlisted = false;
         
         if (userSnapshot.hasData && userSnapshot.data!.exists) {
           Map<String, dynamic> userData = userSnapshot.data!.data() as Map<String, dynamic>;
           List<dynamic> library = userData['library'] ?? [];
           isOwned = library.contains(widget.game.id);
           currentBalance = (userData['wallet_balance'] ?? 0.0).toDouble();
+          wishlist = userData['wishlist'] ?? [];
+          isWishlisted = wishlist.contains(widget.game.id);
         }
 
         return Scaffold(
@@ -437,6 +445,50 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
             title: Text(widget.game.name, style: const TextStyle(color: Colors.white, fontSize: 16)),
             backgroundColor: const Color(0xFF171A21),
             elevation: 0,
+            actions: [
+              if (userSnapshot.hasData && userSnapshot.data!.exists && !isOwned)
+                IconButton(
+                  icon: Icon(
+                    isWishlisted ? Icons.favorite : Icons.favorite_border,
+                    color: isWishlisted ? Colors.redAccent : Colors.white,
+                  ),
+                  onPressed: () async {
+                    User? user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+                      
+                      // Double check to verify user doesn't already own the game
+                      DocumentSnapshot freshUserDoc = await userDoc.get();
+                      if (freshUserDoc.exists) {
+                        Map<String, dynamic> freshUserData = freshUserDoc.data() as Map<String, dynamic>;
+                        List<dynamic> freshLibrary = freshUserData['library'] ?? [];
+                        if (freshLibrary.contains(widget.game.id)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Cannot wishlist a game you already own!'), backgroundColor: Colors.red),
+                          );
+                          return;
+                        }
+                      }
+                      
+                      if (isWishlisted) {
+                        await userDoc.update({
+                          'wishlist': FieldValue.arrayRemove([widget.game.id])
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Removed ${widget.game.name} from wishlist.'), backgroundColor: Colors.orange),
+                        );
+                      } else {
+                        await userDoc.update({
+                          'wishlist': FieldValue.arrayUnion([widget.game.id])
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Added ${widget.game.name} to wishlist!'), backgroundColor: Colors.green),
+                        );
+                      }
+                    }
+                  },
+                ),
+            ],
           ),
           body: SingleChildScrollView(
             child: Column(

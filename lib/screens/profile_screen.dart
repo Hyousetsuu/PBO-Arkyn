@@ -8,6 +8,7 @@ import 'home.dart';
 import 'package:firebase_auth/firebase_auth.dart'; 
 import 'library_screen.dart';
 import 'friends_screen.dart';
+import 'wishlist_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double walletBalance = 0.0;
   double totalTopup = 0.0;
   double totalSpent = 0.0;
+  List<dynamic> wishlist = [];
   bool _isLoading = false;
   StreamSubscription<DocumentSnapshot>? _profileSubscription;
 
@@ -66,6 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               walletBalance = (data['wallet_balance'] ?? 0.0).toDouble();
               totalTopup = (data['total_topup'] ?? 0.0).toDouble();
               totalSpent = (data['total_spent'] ?? 0.0).toDouble();
+              wishlist = data['wishlist'] ?? [];
             });
           }
         }
@@ -454,6 +457,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   // ------------------------------------------
+
+                  // --- WISHLIST CARD ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A475E),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF354870), width: 1.5),
+                      ),
+                      child: ListTile(
+                        leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                        title: Text(
+                          'My Wishlist (${wishlist.length})',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: const Text('View your saved games', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const WishlistScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 10),
                   const Padding(

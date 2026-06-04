@@ -40,6 +40,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         
         batch.update(userDoc, {
           'library': FieldValue.arrayUnion([widget.game.id]),
+          'wishlist': FieldValue.arrayRemove([widget.game.id]),
         });
 
         DocumentReference purchaseDoc = userDoc.collection('purchases').doc();
