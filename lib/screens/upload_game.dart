@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UploadGameScreen extends StatefulWidget {
   const UploadGameScreen({super.key});
@@ -21,14 +22,30 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
 
   // Fungsi untuk upload data ke Firebase
   Future<void> _uploadData() async {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login first to upload a game!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     // Validasi form agar tidak ada yang kosong
-    if (_nameController.text.isEmpty ||
-        _categoryController.text.isEmpty ||
-        _priceController.text.isEmpty ||
-        _aboutController.text.isEmpty ||
-        _imageUrlController.text.isEmpty) { // Cek URL gambar juga
+    if (_nameController.text.trim().isEmpty ||
+        _categoryController.text.trim().isEmpty ||
+        _priceController.text.trim().isEmpty ||
+        _aboutController.text.trim().isEmpty ||
+        _imageUrlController.text.trim().isEmpty) { // Cek URL gambar juga
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all fields!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final double? price = double.tryParse(_priceController.text.trim());
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Price must be greater than zero!'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -45,13 +62,23 @@ class _UploadGameScreenState extends State<UploadGameScreen> {
         .toList();
 
     try {
+      final String developerName = currentUser.displayName ??
+          (currentUser.email != null && currentUser.email!.contains('@')
+              ? currentUser.email!.split('@').first
+              : 'Unknown Developer');
+
       // Data yang akan disimpan ke koleksi 'pending'
       final gameData = {
-        'name': _nameController.text,
+        'name': _nameController.text.trim(),
         'category': categoryList, // Disimpan sebagai Array/List
-        'price': double.tryParse(_priceController.text) ?? 0.0,
-        'about': _aboutController.text,
+        'price': price,
+        'about': _aboutController.text.trim(),
         'cover_url': _imageUrlController.text.trim(), // Simpan URL Gambar
+        'developer_uid': currentUser.uid,
+        'developer_name': developerName,
+        'developer_email': currentUser.email ?? '',
+        'status': 'pending',
+        'created_at': Timestamp.now(),
         'uploadedAt': FieldValue.serverTimestamp(),
       };
 

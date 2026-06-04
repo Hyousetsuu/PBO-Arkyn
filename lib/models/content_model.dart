@@ -48,7 +48,7 @@ class ContentModel {
       // SOLUSI: Cek 'cover_url', jika kosong coba ambil dari 'imageUrl'
       coverUrl: map['cover_url'] ?? map['imageUrl'] ?? 'https://placehold.co/600x400/png',
       
-      developer: map['developer'] ?? 'Unknown Developer',
+      developer: map['developer'] ?? map['developer_name'] ?? 'Unknown Developer',
     );
   }
 }

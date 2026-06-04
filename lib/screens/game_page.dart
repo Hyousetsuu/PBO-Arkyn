@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/content_model.dart'; // Import Model
-import 'game_card.dart'; 
+import '../widgets/game_card.dart'; 
 import 'game_detail_screen.dart'; // Gunakan GameDetailScreen yang baru
 
 class GamesPage extends StatefulWidget {

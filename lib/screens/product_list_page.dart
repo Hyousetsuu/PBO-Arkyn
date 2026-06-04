@@ -38,7 +38,7 @@ class ProductListPage extends StatelessWidget {
                     ),
                     title: Text(product.name),
                     subtitle: Text(
-                      'Kategori: ${product.category}\n'
+                      'Kategori: ${product.categories.join(', ')}\n'
                       'Harga: Rp${product.price}\n'
                       'Tentang: ${product.description}', // UBAH 'about' jadi 'description'
                     ),

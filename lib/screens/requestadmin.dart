@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RequestAdmin extends StatefulWidget {
   const RequestAdmin({Key? key}) : super(key: key);
@@ -106,21 +107,26 @@ class _RequestAdminState extends State<RequestAdmin> {
   // Fungsi untuk menyetujui game
   Future<void> _approveGame(DocumentSnapshot game, BuildContext context) async {
     try {
+      final gameData = game.data() as Map<String, dynamic>? ?? {};
+      final approvedGame = Map<String, dynamic>.from(gameData);
+
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      final String adminUid = currentUser?.uid ?? 'unknown_admin';
+
+      approvedGame['status'] = 'approved';
+      approvedGame['approved_at'] = Timestamp.now();
+      approvedGame['approved_by'] = adminUid;
+
       // Pindahkan data game ke koleksi 'games'
-      await FirebaseFirestore.instance.collection('games').add({
-        'name': game['name'],
-        'price': game['price'],
-        'category': game['category'],
-        'about': game[
-            'about'], // Pastikan Anda memindahkan semua data yang diperlukan
-      });
+      await FirebaseFirestore.instance.collection('games').add(approvedGame);
+      
       // Hapus data dari koleksi 'pending'
       await game.reference.delete();
 
       // Menampilkan snackbar dengan nama game yang disetujui
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Berhasil menyetujui game: ${game['name']}'),
+          content: Text('Berhasil menyetujui game: ${gameData['name'] ?? 'No Name'}'),
           backgroundColor: Colors.green,
         ),
       );
